@@ -7,7 +7,19 @@
     <artifactId>parking-system</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-
+    
+	  <developers>
+	    <developer>
+	      <id>elkamphy</id>
+	      <name>Noel Kamphoa</name>
+	      <email>example@gmail.com</email>
+	      <roles>
+	        <role>Java Developer</role>
+	      </roles>
+	      <timezone>+1</timezone>
+	    </developer>
+	  </developers>
+  
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -28,7 +40,7 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.17</version>
+            <version>8.0.23</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -59,6 +71,19 @@
             <artifactId>maven-assembly-plugin</artifactId>
             <version>3.0.0</version>
         </dependency>
+		<!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-maven-plugin -->
+		<dependency>
+		    <groupId>com.github.spotbugs</groupId>
+		    <artifactId>spotbugs-maven-plugin</artifactId>
+		    <version>3.1.12.2</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-failsafe-plugin -->
+		<dependency>
+		    <groupId>org.apache.maven.plugins</groupId>
+		    <artifactId>maven-failsafe-plugin</artifactId>
+		    <version>3.0.0-M4</version>
+		    <scope>test</scope>
+		</dependency>        
     </dependencies>
 
     <build>
@@ -81,12 +106,45 @@
                                 </manifest>
                             </archive>
                             <descriptorRefs>
-                                <descriptorRef>executable-jar-with-dependencies</descriptorRef>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
                             </descriptorRefs>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+	        <!-- Part of Maven - specified version explicitly for compatibility
+	             with the maven-project-info-reports-plugin 3.0.0-->
+	        <plugin>
+	            <groupId>org.apache.maven.plugins</groupId>
+	            <artifactId>maven-site-plugin</artifactId>
+	            <version>3.7.1</version>
+	        </plugin>            
+	        <plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-project-info-reports-plugin</artifactId>
+			    <version>2.9</version>
+			</plugin>
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<version>3.1.12.2</version>
+				<configuration>
+	                <failOnError>false</failOnError>
+				</configuration>
+			</plugin>     
+			<plugin>
+		        <groupId>org.apache.maven.plugins</groupId>
+		        <artifactId>maven-failsafe-plugin</artifactId>
+		        <executions>
+		          <execution>
+		            <id>integration-tests</id>
+		            <goals>
+		              <goal>integration-test</goal>
+		              <goal>verify</goal>
+		            </goals>
+				  </execution>
+		        </executions>
+	        </plugin>			       
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -137,10 +195,156 @@
                         <goals>
                             <goal>report</goal>
                         </goals>
+			            <configuration>
+			            	<title>${project.name} : Unit tests</title>
+			                <!-- Sets the path to the file which contains the execution data. -->
+			                <dataFile>${project.build.directory}/jacoco-ut.exec</dataFile>
+			                <!-- Sets the output directory for the code coverage report. -->
+			                <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
+			            </configuration>                        
                     </execution>
+					<!-- ajout pour integ -->
+					<execution>
+						<id>jacoco-integration</id>
+						<goals>
+							<goal>prepare-agent-integration</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>jacoco-report-integration</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+					<execution>
+			            <id>pre-integration-test</id>
+			            <phase>pre-integration-test</phase>
+			            <goals>
+			                <goal>prepare-agent</goal>
+			            </goals>
+			            <configuration>
+			                <!-- Sets the path to the file which contains the execution data. -->
+			                <destFile>${project.build.directory}/jacoco-it.exec</destFile>
+			                <!--
+			                    Sets the name of the property containing the settings
+			                    for JaCoCo runtime agent.
+			                -->
+			                <propertyName>failsafeArgLine</propertyName>
+			            </configuration>
+			        </execution>
+			        <!--
+			            Ensures that the code coverage report for integration tests after
+			            integration tests have been run.
+			        -->
+			        <execution>
+			            <id>post-integration-test</id>
+			            <phase>post-integration-test</phase>
+			            <goals>
+			                <goal>report</goal>
+			            </goals>
+			            <configuration>
+			            	<title>${project.name} : Integration tests</title>
+			                <!-- Sets the path to the file which contains the execution data. -->
+			                <dataFile>${project.build.directory}/jacoco-it.exec</dataFile>
+			                <!-- Sets the output directory for the code coverage report. -->
+			                <outputDirectory>${project.reporting.outputDirectory}/jacoco-it</outputDirectory>
+			            </configuration>
+			        </execution>
+			        <!-- Merce UT et IT -->
+			        <execution>
+					  <id>merge-unit-and-integration</id>
+					    <phase>post-integration-test</phase>
+					      <goals>
+					        <goal>merge</goal>
+					      </goals>
+					      <configuration>
+					      <fileSets>
+					        <fileSet>
+					          <directory>${project.build.directory}</directory> 
+					          <includes>
+					            <include>*.exec</include>
+					          </includes>
+					        </fileSet>
+					      </fileSets>
+					      <destFile>${project.build.directory}/jacoco-merged.exec</destFile>
+					    </configuration>
+					  </execution>
+					<execution>
+					  <id>create-merged-report</id>
+					  <phase>post-integration-test</phase>
+					  <goals>
+					    <goal>report</goal>
+					  </goals>
+					  <configuration>
+					    <title>${project.name} : Merge UT and IT</title>
+					    <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
+					    <outputDirectory>${project.reporting.outputDirectory}/jacoco-merged</outputDirectory>
+					  </configuration>
+					</execution>                    
                 </executions>
             </plugin>
         </plugins>
     </build>
-
+	<reporting>
+	    <plugins>
+	      <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-project-info-reports-plugin</artifactId>
+	        <version>2.6</version>
+	        <reportSets>
+	          <reportSet>
+	            <reports><!-- select reports -->
+	              <report>index</report>	              
+	              <report>project-team</report> 
+	              <report>dependency-info</report>
+	              <report>help</report>	  
+	            </reports>
+	          </reportSet>
+	        </reportSets>
+	      </plugin>
+		 <!-- Soptbugs report-->
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+			</plugin>	      
+	      <!-- Surefire report -->
+	      <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-surefire-report-plugin</artifactId>
+	      </plugin>	      
+		<!-- JACOCO report -->
+           <plugin>
+	        <groupId>org.jacoco</groupId>
+	        <artifactId>jacoco-maven-plugin</artifactId>
+	        <reportSets>
+	          <reportSet>
+	            <reports>
+	              <report>report</report> 
+	            </reports>
+	          </reportSet>
+	        </reportSets>
+	      </plugin>	      
+	      <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-javadoc-plugin</artifactId>
+	        <version>2.9</version>
+	        <reportSets>
+	          <reportSet><!-- by default, id = "default" -->
+	            <reports><!-- select non-aggregate reports -->
+	              <report>javadoc</report>
+	              <report>test-javadoc</report>            
+	            </reports>
+	          </reportSet>
+	          <reportSet><!-- aggregate reportSet, to define in poms having modules -->
+	            <id>aggregate</id>
+	            <inherited>false</inherited><!-- don't run aggregate in child modules -->
+	            <reports>
+	              <report>aggregate</report>
+	            </reports>
+	          </reportSet>
+	        </reportSets>
+	      </plugin>
+	    </plugins>
+	  </reporting>
 </project>
