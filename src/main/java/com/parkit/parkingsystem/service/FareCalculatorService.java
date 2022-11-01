@@ -13,17 +13,18 @@ public class FareCalculatorService {
         double inHour = ticket.getInTime().getTime()/(3600000d);
         double outHour = ticket.getOutTime().getTime()/(3600000d);
 
-        //TODO: Some tests are failing here. Need to check if this logic is correct
         double duration = outHour - inHour;
+        duration = duration <= 0.5 ? 0 : duration;
+        double discountedRate = ticket.isRecurring() ? 0.95 : 1;
         
         System.out.println("in="+inHour+", out="+outHour+", duration="+duration);
         switch (ticket.getParkingSpot().getParkingType()){
             case CAR: {
-                ticket.setPrice(duration * Fare.CAR_RATE_PER_HOUR);
+                ticket.setPrice(duration * Fare.CAR_RATE_PER_HOUR * discountedRate);
                 break;
             }
             case BIKE: {
-                ticket.setPrice(duration * Fare.BIKE_RATE_PER_HOUR);
+                ticket.setPrice(duration * Fare.BIKE_RATE_PER_HOUR * discountedRate);
                 break;
             }
             default: throw new IllegalArgumentException("Unkown Parking Type");

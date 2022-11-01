@@ -102,7 +102,12 @@ public class ParkingService {
             String vehicleRegNumber = getVehichleRegNumber();
             Ticket ticket = ticketDAO.getTicket(vehicleRegNumber);
             Date outTime = new Date();
+            outTime.setTime(System.currentTimeMillis());
             ticket.setOutTime(outTime);
+            //Check if recurring user
+            int count = ticketDAO.getTicketCount(vehicleRegNumber);
+            ticket.setRecurring(count>1);
+            
             fareCalculatorService.calculateFare(ticket);
             if(ticketDAO.updateTicket(ticket)) {
                 ParkingSpot parkingSpot = ticket.getParkingSpot();
